@@ -1,0 +1,84 @@
+name: Build APK SBS YT Guard
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    env:
+      KEY_PASS: "432e02c25dd616daf47a"
+    steps:
+      - name: Ambil kode
+        uses: actions/checkout@v4
+
+      - name: Pasang Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Pasang Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Siapkan file aplikasi
+        run: |
+          mkdir -p build/www
+          cp index.html style.css app.js config.js license.js rules.js manifest.json sw.js icon-192.png icon-512.png build/www/
+
+      - name: Buat proyek Android (Capacitor)
+        working-directory: build
+        run: |
+          npm init -y
+          npm install @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7
+          npx cap init "SBS YT Guard" com.sbs.ytguard --web-dir www
+          npx cap add android
+          npx cap sync android
+
+      - name: Pasang ikon
+        working-directory: build/android/app/src/main/res
+        run: |
+          command -v convert || (sudo apt-get update && sudo apt-get install -y imagemagick)
+          rm -rf mipmap-anydpi-v26
+          for d in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
+            dir="mipmap-${d%%:*}"; size="${d##*:}"
+            mkdir -p "$dir"
+            rm -f "$dir"/ic_launcher*.webp "$dir"/ic_launcher*.png
+            convert "$GITHUB_WORKSPACE/icon-512.png" -resize ${size}x${size} "$dir/ic_launcher.png"
+            cp "$dir/ic_launcher.png" "$dir/ic_launcher_round.png"
+          done
+
+      - name: Rakit APK
+        working-directory: build/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+
+      - name: Tanda tangani APK
+        run: |
+          BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+          IN=build/android/app/build/outputs/apk/release/app-release-unsigned.apk
+          "$BT/zipalign" -f -p 4 "$IN" aligned.apk
+          "$BT/apksigner" sign --ks sbs-key.jks --ks-key-alias sbs --ks-pass env:KEY_PASS --key-pass env:KEY_PASS --out SBS-YT-Guard.apk aligned.apk
+          "$BT/apksigner" verify SBS-YT-Guard.apk
+
+      - name: Simpan APK (tab Actions)
+        uses: actions/upload-artifact@v4
+        with:
+          name: SBS-YT-Guard-APK
+          path: SBS-YT-Guard.apk
+
+      - name: Terbitkan ke Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: SBS YT Guard v${{ github.run_number }}
+          files: SBS-YT-Guard.apk
+          make_latest: true
