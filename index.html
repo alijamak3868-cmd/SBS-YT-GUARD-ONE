@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="description" content="Cek risiko monetisasi video YouTube sebelum upload.">
+  <title>SBS YT Guard – Cek Risiko Monetisasi</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ============ LAYAR AKTIVASI ============ -->
+  <section id="screen-license" class="screen" hidden>
+    <div class="license-wrap">
+      <img src="icon-192.png" alt="" class="logo">
+      <h1 class="app-name">SBS YT Guard</h1>
+      <p class="muted center">Cek risiko monetisasi YouTube sebelum upload</p>
+
+      <div class="card">
+        <h2>1. Kirim Device ID ke penjual</h2>
+        <p class="muted small">Ini kode unik HP kamu. Lisensi hanya berlaku di HP ini.</p>
+        <div class="device-box" id="device-id">DEV-....</div>
+        <div class="row">
+          <button class="btn ghost" id="btn-copy-device">📋 Salin</button>
+          <a class="btn wa" id="btn-wa-device" target="_blank" rel="noopener">💬 Kirim via WhatsApp</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>2. Tempel kode lisensi</h2>
+        <textarea id="license-input" rows="3" placeholder="CM1-xxxxxxxx..." autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
+        <button class="btn primary block" id="btn-activate">Aktifkan</button>
+        <p class="msg" id="license-msg" role="alert"></p>
+      </div>
+
+      <details class="card help">
+        <summary>Pindah HP?</summary>
+        <ol class="small">
+          <li>Di HP lama, buka <b>⚙️ Pengaturan → Logout &amp; Pindah HP</b>.</li>
+          <li>Kirim <b>Kode Logout</b> dan <b>Device ID HP baru</b> ke penjual.</li>
+          <li>Penjual mengirim lisensi baru untuk HP baru. API key lama tetap bisa kamu pakai.</li>
+        </ol>
+        <p class="small muted">HP lama hilang/rusak? Hubungi penjual.</p>
+      </details>
+    </div>
+  </section>
+
+  <!-- ============ LAYAR UTAMA ============ -->
+  <section id="screen-main" class="screen" hidden>
+    <header class="topbar">
+      <div class="brand"><img src="icon-192.png" alt=""> SBS YT Guard</div>
+      <button class="icon-btn" id="btn-open-settings" aria-label="Pengaturan">⚙️</button>
+    </header>
+
+    <main class="content">
+      <form id="check-form" class="card" autocomplete="off">
+        <h2>Data Video</h2>
+        <label>Judul <span class="counter" id="title-count">0/100</span>
+          <input type="text" id="f-title" placeholder="Judul video kamu">
+        </label>
+        <label>Deskripsi
+          <textarea id="f-desc" rows="4" placeholder="Tempel deskripsi video"></textarea>
+        </label>
+        <label>Tag <span class="hint">(pisahkan dengan koma)</span>
+          <textarea id="f-tags" rows="2" placeholder="tag 1, tag 2, tag 3"></textarea>
+        </label>
+        <label>Naskah / Transkrip <span class="hint">(opsional, tapi disarankan)</span>
+          <textarea id="f-script" rows="5" placeholder="Tempel naskah atau transkrip video"></textarea>
+        </label>
+
+        <h3>Daftar Cek</h3>
+        <div class="select-row">
+          <span>Musik dari sumber berlisensi?</span>
+          <select id="c-musik">
+            <option value="none">Tanpa musik</option>
+            <option value="ya">Ya</option>
+            <option value="tidak">Tidak / tidak yakin</option>
+          </select>
+        </div>
+        <div class="select-row">
+          <span>Footage/gambar milik sendiri atau berlisensi?</span>
+          <select id="c-footage">
+            <option value="ya">Ya</option>
+            <option value="tidak">Tidak / tidak yakin</option>
+          </select>
+        </div>
+        <label class="check"><input type="checkbox" id="c-reupload"> Video diambil dari platform/orang lain (reupload)</label>
+        <label class="check"><input type="checkbox" id="c-mirip"> Format sangat mirip dengan video lain di channel</label>
+        <label class="check"><input type="checkbox" id="c-ai"> Memakai AI (suara, gambar, atau video)</label>
+        <div id="ai-sub" hidden>
+          <label class="check sub"><input type="checkbox" id="c-realistis"> Hasil AI terlihat seperti nyata</label>
+          <label class="check sub"><input type="checkbox" id="c-suara"> Narasi pakai suara sendiri</label>
+        </div>
+
+        <div class="row sticky-actions">
+          <button type="button" class="btn ghost" id="btn-reset">Bersihkan</button>
+          <button type="submit" class="btn primary grow">🔍 Cek Risiko</button>
+        </div>
+      </form>
+
+      <section id="result" class="card" hidden>
+        <div class="score-head">
+          <div class="ring" id="score-ring"><span id="score-num">0</span></div>
+          <div>
+            <div class="level" id="score-level">-</div>
+            <p class="muted small">Skor keamanan monetisasi (0–100)</p>
+          </div>
+        </div>
+        <div id="findings"></div>
+        <div class="row">
+          <button class="btn ghost" id="btn-copy-result">📋 Salin hasil</button>
+          <button class="btn ai grow" id="btn-ai">✨ Analisis AI</button>
+        </div>
+        <p class="disclaimer">Hasil ini perkiraan berdasarkan pola umum kebijakan YouTube, bukan jaminan. Keputusan akhir tetap ada di YouTube.</p>
+      </section>
+
+      <section id="ai-result" class="card" hidden></section>
+    </main>
+  </section>
+
+  <!-- ============ PENGATURAN ============ -->
+  <section id="screen-settings" class="screen overlay" hidden>
+    <header class="topbar">
+      <button class="icon-btn" id="btn-close-settings" aria-label="Kembali">←</button>
+      <div class="brand">Pengaturan</div>
+      <span></span>
+    </header>
+    <main class="content">
+      <div class="card">
+        <h2>🔑 API Key Gemini</h2>
+        <p class="muted small">Dibutuhkan untuk tombol <b>Analisis AI</b>. Key hanya tersimpan di HP ini.</p>
+        <a class="btn primary block" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">🔑 Dapatkan API Key Gratis</a>
+        <ol class="small steps">
+          <li>Klik tombol di atas, login dengan akun Google.</li>
+          <li>Tekan <b>Create API key</b>, lalu salin key-nya.</li>
+          <li>Tempel di bawah, lalu tekan <b>Tes Koneksi</b>.</li>
+        </ol>
+        <div class="key-field">
+          <input type="password" id="api-key" placeholder="Tempel API key di sini" autocomplete="off" spellcheck="false">
+          <button class="icon-btn small-btn" id="btn-toggle-key" type="button" aria-label="Lihat key">👁️</button>
+        </div>
+        <div class="row">
+          <button class="btn primary grow" id="btn-save-key">Simpan &amp; Tes Koneksi</button>
+          <button class="btn ghost" id="btn-delete-key">Hapus</button>
+        </div>
+        <p class="msg" id="key-msg"></p>
+        <details class="small">
+          <summary>Pengaturan lanjutan</summary>
+          <label>Model AI <span class="hint">(otomatis terisi saat tes)</span>
+            <input type="text" id="api-model" placeholder="gemini-2.5-flash" spellcheck="false">
+          </label>
+        </details>
+      </div>
+
+      <div class="card">
+        <h2>📱 Lisensi</h2>
+        <p class="small">Status: <b class="ok">Aktif di HP ini</b></p>
+        <p class="small">Device ID: <code id="settings-device"></code></p>
+        <button class="btn danger block" id="btn-logout">Logout &amp; Pindah HP</button>
+        <p class="small muted">Setelah logout, lisensi di HP ini tidak bisa dipakai lagi. Kamu akan mendapat Kode Logout untuk dikirim ke penjual.</p>
+      </div>
+
+      <p class="center small muted">SBS YT Guard v1.0</p>
+    </main>
+  </section>
+
+  <!-- ============ MODAL ============ -->
+  <div id="modal" class="modal" hidden>
+    <div class="modal-box">
+      <h3 id="modal-title"></h3>
+      <div id="modal-body"></div>
+      <div class="row" id="modal-actions"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="config.js"></script>
+  <script src="license.js"></script>
+  <script src="rules.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
